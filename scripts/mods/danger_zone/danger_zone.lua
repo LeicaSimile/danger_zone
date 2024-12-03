@@ -9,6 +9,10 @@ local hazard_state = HazardPropSettings.hazard_state
 
 local decals = mod:persistent_table("hazard_decals")
 local settings_cache = {}
+-- Was hoping to find other potential styles. Maybe one day.
+local decal_path = "content/levels/training_grounds/fx/decal_aoe_indicator"
+local package_path = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
+table.unpack = table.unpack or unpack
 
 ----- ## Settings management ## -----
 local function get_setting(setting)
@@ -41,6 +45,14 @@ end
 
 ---- ## Rendering outlines ## ----
 local function get_decal(group_id, unit, world, radius, validator, ...)
+    local validator_args = {...}
+    if not Managers.package:has_loaded(package_path) then
+		Managers.package:load(package_path, "danger_zone", function()
+			get_decal(group_id, unit, world, radius, validator, table.unpack(validator_args))
+		end)
+		return
+	end
+
     local decal = decals[unit]
     local decal_enabled = is_enabled(group_id)
     local decal_valid = validator == nil or validators[validator](...)
@@ -48,9 +60,6 @@ local function get_decal(group_id, unit, world, radius, validator, ...)
     
     if should_show and (decal == nil or decal.unit == nil) then
         local unit_position = POSITION_LOOKUP[unit]
-
-        -- Was hoping to find other potential styles. Maybe one day.
-        local decal_path = "content/levels/training_grounds/fx/decal_aoe_indicator"
 
         -- Create decal unit (based on raindish's NumericUI medipack)
         decal = {
@@ -154,7 +163,6 @@ end
 
 mod.on_enabled = function(_)
     clear_settings_cache()
-
     -- Display any outlines previously active as appropriate.
     display_all_valid_decals()
 end

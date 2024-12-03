@@ -1,5 +1,5 @@
 local mod = get_mod("danger_zone")
-local version = "1.0.0"
+local version = "1.0.2"
 local utils = mod:io_dofile("danger_zone/scripts/mods/danger_zone/utils")
 local init_loc = {
 	mod_name = {
