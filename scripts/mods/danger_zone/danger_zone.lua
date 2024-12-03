@@ -101,7 +101,7 @@ local function destroy_decal(unit, temporary)
 	local decal = decals[unit]
 	if decal then
         decal.active = false
-        if decal.unit then
+        if Unit.is_valid(decal.unit) then
             World.destroy_unit(Unit.world(decal.unit), decal.unit)
             decal.unit = nil
         end
@@ -113,7 +113,8 @@ end
 
 local function display_all_valid_decals(group_id)
     for unit, val in pairs(decals) do
-        local decal = get_decal(val.setting_group, unit, unit and Unit.world(unit), val.radius, val.validator, val.validator_args)
+        local world = Unit.is_valid(unit) and Unit.world(unit)
+        local decal = get_decal(val.setting_group, unit, world, val.radius, val.validator, val.validator_args)
         if group_id == nil or (decal and decal.setting_group == group_id) then
             if decal and decal.show then
                 draw_circle(decal, decal.radius, decal.setting_group)
@@ -251,7 +252,7 @@ mod:hook_safe("Buff", "init", function (_, context, template)
     local outline_template = breed_template and breed_template.buffs and breed_template.buffs[template.name]
     if outline_template then
         local unit = context.unit
-        local world = Unit.world(unit)
+        local world = Unit.is_valid(unit) and Unit.world(unit)
         local decal = get_decal(outline_template.setting_group, unit, world, outline_template.radius, outline_template.validator, unit)
         if decal and decal.show then
             draw_circle(decal, outline_template.radius, outline_template.setting_group)

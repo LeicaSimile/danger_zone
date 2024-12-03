@@ -1,10 +1,11 @@
 local validators = {
     valid_minion_decal = function (unit)
-        return unit and HEALTH_ALIVE[unit]
+        local valid = Unit.is_valid(unit) and HEALTH_ALIVE[unit]
+        return valid
     end,
 
     valid_barrel_decal = function (prop, valid_states)
-        if prop == nil or prop._unit == nil or valid_states == nil then
+        if prop == nil or not Unit.is_valid(prop._unit) then
             return false
         end
 
