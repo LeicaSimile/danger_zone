@@ -250,8 +250,23 @@ mod:hook_safe("MinionDeathManager", "set_dead", function(_, unit)
 end)
 
 mod:hook_safe("MinionSpawnManager", "unregister_unit", function(_, unit)
-    if unit ~= nil then
-        destroy_decal(unit)
+    destroy_decal(unit)
+end)
+
+mod:hook_safe("UnitSpawnerManager", "mark_for_deletion", function(_, unit)
+    destroy_decal(unit)
+end)
+
+mod:hook_safe("DialogueExtension", "extensions_ready", function (self, world, unit)
+    local breed_template = outline_templates.minion[self._context.breed_name]
+    if breed_template and breed_template.set_source_id then
+        mod:echo("Dialogue ext - source id: %s", self._wwise_source_id)
+    end
+end)
+
+mod:hook_safe("WwiseWorld", "set_source_parameter", function(_, source_id, param, value)
+    if param == "daemonhost_stage" then
+        mod:echo("(%s) Stage: %s", source_id, value)
     end
 end)
 
