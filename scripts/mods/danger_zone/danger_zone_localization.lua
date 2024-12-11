@@ -181,24 +181,28 @@ local subheaders_loc = {
 			group_id = "daemonhost_spawn",
 			loc = {
 				["en"] = "Stage: Sleeping",
+				["zh-cn"] = "阶段：睡眠",
 			},
 		},
 		{
 			group_id = "daemonhost_alert1",
 			loc = {
 				["en"] = "Stage: Alert 1",
+				["zh-cn"] = "阶段：警告 1",
 			},
 		},
 		{
 			group_id = "daemonhost_alert2",
 			loc = {
 				["en"] = "Stage: Alert 2",
+				["zh-cn"] = "阶段：警告 2",
 			},
 		},
 		{
 			group_id = "daemonhost_alert3",
 			loc = {
 				["en"] = "Stage: Alert 3",
+				["zh-cn"] = "阶段：警告 3",
 			},
 		},
 	},
@@ -210,19 +214,19 @@ local function add_group_loc(group_id, table, subheader)
 	if subheader then
 		table[group_id .. "_colour_red"] = {
 			["en"] = subheader["en"] .. "\n    Red (%%)\n ",
-			--["zh-cn"] = "红色（%%）",
+			["zh-cn"] = subheader["en"] .. "\n    红色（%%）\n ",
 		}
 		table[group_id .. "_colour_green"] = {
 			["en"] = "    Green (%%)",
-			--["zh-cn"] = "绿色（%%）",
+			["zh-cn"] = "    绿色（%%）",
 		}
 		table[group_id .. "_colour_blue"] = {
 			["en"] = "    Blue (%%)",
-			--["zh-cn"] = "蓝色（%%）",
+			["zh-cn"] = "    蓝色（%%）",
 		}
 		table[group_id .. "_colour_alpha"] = {
 			["en"] = "    Opacity (%%)",
-			--["zh-cn"] = "不透明度（%%）",
+			["zh-cn"] = "    不透明度（%%）",
 		}
 	else
 		table[group_id .. "_colour_red"] = {
