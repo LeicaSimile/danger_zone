@@ -8,6 +8,7 @@ local HazardPropSettings = require("scripts/settings/hazard_prop/hazard_prop_set
 local hazard_state = HazardPropSettings.hazard_state
 
 local decals = mod:persistent_table("hazard_decals")
+local source_unit_map = mod:persistent_table("dz_source_unit_map")
 local settings_cache = {}
 -- Was hoping to find other potential styles. Maybe one day.
 local decal_path = "content/levels/training_grounds/fx/decal_aoe_indicator"
@@ -44,17 +45,20 @@ end
 
 
 ---- ## Rendering outlines ## ----
-local function get_decal(group_id, unit, world, radius, validator, ...)
+local function get_decal(template_id, unit, world, radius, ...)
     local validator_args = {...}
     if not Managers.package:has_loaded(package_path) then
 		Managers.package:load(package_path, "danger_zone", function()
-			get_decal(group_id, unit, world, radius, validator, table.unpack(validator_args))
+			get_decal(template_id, unit, world, radius, table.unpack(validator_args))
 		end)
 		return
 	end
 
+    local template = outline_templates.templates[template_id]
+    local validator = template.validator
+    local setting_group_enabled = template.setting_group_enabled or template.setting_group
     local decal = decals[unit]
-    local decal_enabled = is_enabled(group_id)
+    local decal_enabled = is_enabled(setting_group_enabled)
     local decal_valid = validator == nil or validators[validator](...)
     local should_show = decal_enabled and decal_valid
     
@@ -64,12 +68,13 @@ local function get_decal(group_id, unit, world, radius, validator, ...)
         -- Create decal unit (based on raindish's NumericUI medipack)
         decal = {
             unit = World.spawn_unit_ex(world, decal_path, nil, unit_position),
-            radius = radius,
-            setting_group = group_id,
+            radius = radius or template.radius,
+            template_id = template_id,
+            setting_group_enabled = setting_group_enabled,
             show = should_show,
             valid = decal_valid,
-            validator = validator,
             validator_args = ...,
+            wwise_source_id = nil,
             active = false,
         }
 
@@ -85,13 +90,15 @@ local function get_decal(group_id, unit, world, radius, validator, ...)
     return decal
 end
 
-local function draw_circle(decal, radius, group_id)
-    if decal.setting_group ~= group_id or not decal.active then
-        decal.setting_group = group_id
+local function draw_circle(decal, radius, template_id)
+    if decal.template_id ~= template_id or not decal.active then
+        local template = outline_templates.templates[template_id]
+        decal.template_id = template_id
+        decal.setting_group_enabled = template.setting_group_enabled
         decal.active = true
 
         -- Set colour
-        local red, green, blue, alpha = get_outline_rgba(group_id)
+        local red, green, blue, alpha = get_outline_rgba(template.setting_group_colour or template.setting_group)
         local colour = Quaternion.identity()
         Quaternion.set_xyzw(colour, red, green, blue, 0)
         Unit.set_vector4_for_material(decal.unit, "projector", "particle_color", colour, true)
@@ -115,18 +122,21 @@ local function destroy_decal(unit, temporary)
             decal.unit = nil
         end
         if not temporary then
+            if decal.wwise_source_id then
+                source_unit_map[decal.wwise_source_id] = nil
+            end
             decals[unit] = nil
         end
 	end
 end
 
-local function display_all_valid_decals(group_id)
+local function display_all_valid_decals(enabled_id)
     for unit, val in pairs(decals) do
         local world = Unit.is_valid(unit) and Unit.world(unit)
-        local decal = get_decal(val.setting_group, unit, world, val.radius, val.validator, val.validator_args)
-        if group_id == nil or (decal and decal.setting_group == group_id) then
+        local decal = get_decal(val.template_id, unit, world, val.radius, val.validator_args)
+        if enabled_id == nil or (decal and decal.setting_group_enabled == enabled_id) then
             if decal and decal.show then
-                draw_circle(decal, decal.radius, decal.setting_group)
+                draw_circle(decal, decal.radius, decal.template_id)
             else
                 local temporary = decal and decal.valid
                 destroy_decal(unit, temporary)
@@ -135,9 +145,9 @@ local function display_all_valid_decals(group_id)
     end
 end
 
-local function destroy_all_decals(group_id, temporary)
+local function destroy_all_decals(enabled_id, temporary)
     for unit, val in pairs(decals) do
-        if group_id == nil or val.setting_group == group_id then
+        if enabled_id == nil or val.setting_group_enabled == enabled_id then
             destroy_decal(unit, temporary)
         end
     end
@@ -179,11 +189,13 @@ end)
 
 ---- ## Liquid Area hooks ## ----
 local function on_liquid_spawn(self, radius)
-    local haz_props = outline_templates.liquid[self._template_name]
-    if haz_props then
-        local decal = get_decal(haz_props.setting_group, self._unit, self._world, radius)
+    local template_id = outline_templates.liquid[self._template_name]
+    local template = outline_templates.templates[template_id]
+
+    if template then
+        local decal = get_decal(template_id, self._unit, self._world, radius)
         if decal and decal.show then
-            draw_circle(decal, radius, haz_props.setting_group)
+            draw_circle(decal, radius, template_id)
         end
     end
 end
@@ -218,13 +230,14 @@ local function on_minion_spawn(extension_init_context, unit)
     local unit_data_ext = ScriptUnit.extension(unit, "unit_data_system")
     local breed = unit_data_ext and unit_data_ext:breed()
     local breed_template = breed and outline_templates.minion[breed.name]
-    local spawn_template = breed_template and breed_template.spawn
+    local template_id = breed_template and breed_template.spawn
+    local template = outline_templates.templates[template_id]
 
-    if spawn_template then
+    if template then
         local world = extension_init_context.world
-        local decal = get_decal(spawn_template.setting_group, unit, world, spawn_template.radius, spawn_template.validator, unit)
+        local decal = get_decal(template_id, unit, world, template.radius, unit)
         if decal and decal.show then
-            draw_circle(decal, spawn_template.radius, spawn_template.setting_group)
+            draw_circle(decal, template.radius, template_id)
         else
             local temporary = decal and decal.valid
             destroy_decal(unit, temporary)
@@ -257,28 +270,47 @@ mod:hook_safe("UnitSpawnerManager", "mark_for_deletion", function(_, unit)
     destroy_decal(unit)
 end)
 
-mod:hook_safe("DialogueExtension", "extensions_ready", function (self, world, unit)
+mod:hook_safe("DialogueExtension", "extensions_ready", function (self, _, unit)
     local breed_template = outline_templates.minion[self._context.breed_name]
-    if breed_template and breed_template.set_source_id then
-        mod:echo("Dialogue ext - source id: %s", self._wwise_source_id)
+    if breed_template and breed_template.set_wwise_source_id then
+        source_unit_map[self._wwise_source_id] = unit
     end
 end)
 
 mod:hook_safe("WwiseWorld", "set_source_parameter", function(_, source_id, param, value)
     if param == "daemonhost_stage" then
-        mod:echo("(%s) Stage: %s", source_id, value)
+        local stages = outline_templates.minion.chaos_daemonhost.stages
+        local template_id = stages[value]
+        local template = outline_templates.templates[template_id]
+
+        if template then
+            local unit = source_unit_map[source_id]
+            local world = Unit.is_valid(unit) and Unit.world(unit)
+            local decal = get_decal(template_id, unit, world, template.radius, unit)
+            if decal then
+                decal.wwise_source_id = source_id
+                if decal.show then
+                    draw_circle(decal, template.radius, template_id)
+                end
+            end
+            if not (decal and decal.valid) then
+                destroy_decal(unit)
+            end
+        end
     end
 end)
 
 mod:hook_safe("Buff", "init", function (_, context, template)
     local breed_template = context.breed and outline_templates.minion[context.breed.name]
-    local outline_template = breed_template and breed_template.buffs and breed_template.buffs[template.name]
-    if outline_template then
+    local template_id = breed_template and breed_template.buffs and breed_template.buffs[template.name]
+    local template = outline_templates.templates[template_id]
+
+    if template then
         local unit = context.unit
         local world = Unit.is_valid(unit) and Unit.world(unit)
-        local decal = get_decal(outline_template.setting_group, unit, world, outline_template.radius, outline_template.validator, unit)
+        local decal = get_decal(template_id, unit, world, template.radius, unit)
         if decal and decal.show then
-            draw_circle(decal, outline_template.radius, outline_template.setting_group)
+            draw_circle(decal, template.radius, template_id)
         else
             local temporary = decal and decal.valid
             destroy_decal(unit, temporary)
@@ -290,15 +322,17 @@ end)
 ---- ## Barrel event hooks ## ----
 mod:hook_safe("HazardPropExtension", "set_content", function(self, content)
     local prop_template = outline_templates.prop[content]
-    local outline_template = prop_template and prop_template.spawn
-    if outline_template then
+    local template_id = prop_template and prop_template.spawn
+    local template = outline_templates.templates[template_id]
+
+    if template then
         local unit = self._unit
         local world = self._world
-        local decal = get_decal(outline_template.setting_group, unit, world, outline_template.radius, outline_template.validator,
+        local decal = get_decal(template_id, unit, world, template.radius,
             self, {hazard_state.idle, hazard_state.triggered}
         )
         if decal and decal.show then
-            draw_circle(decal, outline_template.radius, outline_template.setting_group)
+            draw_circle(decal, template.radius, template_id)
         else
             local temporary = decal and decal.valid
             destroy_decal(unit, temporary)
@@ -308,16 +342,18 @@ end)
 
 mod:hook_safe("HazardPropExtension", "set_current_state", function(self, state)
     local prop_template = outline_templates.prop[self._content]
-    local outline_template = prop_template and prop_template.triggered
-	if outline_template then
+    local template_id = prop_template and prop_template.triggered
+    local template = outline_templates.templates[template_id]
+
+	if template then
         local unit = self._unit
         local world = self._world
         if state == hazard_state.triggered then
-            local decal = get_decal(outline_template.setting_group, unit, world, outline_template.radius, outline_template.validator,
+            local decal = get_decal(template_id, unit, world, template.radius,
                 self, {hazard_state.triggered}
             )
             if decal and decal.show then
-                draw_circle(decal, outline_template.radius, outline_template.setting_group)
+                draw_circle(decal, template.radius, template_id)
             else
                 local temporary = decal and decal.valid
                 destroy_decal(unit, temporary)
