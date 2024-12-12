@@ -214,7 +214,7 @@ local function add_group_loc(group_id, table, subheader)
 	if subheader then
 		table[group_id .. "_colour_red"] = {
 			["en"] = subheader["en"] .. "\n    Red (%%)\n ",
-			["zh-cn"] = subheader["en"] .. "\n    红色（%%）\n ",
+			["zh-cn"] = subheader["zh-cn"] .. "\n    红色（%%）\n ",
 		}
 		table[group_id .. "_colour_green"] = {
 			["en"] = "    Green (%%)",
