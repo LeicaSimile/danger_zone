@@ -153,6 +153,17 @@ local function destroy_all_decals(enabled_id, temporary)
     end
 end
 
+local function check_active_decals()
+    local game_state = Managers.presence and Managers.presence._current_game_state_name
+    local game_mode = Managers.state.game_mode and Managers.state.game_mode:game_mode_name()
+    if game_state == "StateGameplay" and game_mode ~= "hub" then
+        -- Display any outlines previously active as appropriate.
+        display_all_valid_decals()
+    else
+        destroy_all_decals()
+    end
+end
+
 
 ---- ## Hooks ## ----
 mod.on_setting_changed = function(setting_id)
@@ -173,8 +184,14 @@ end
 
 mod.on_enabled = function(_)
     clear_settings_cache()
-    -- Display any outlines previously active as appropriate.
-    display_all_valid_decals()
+    if not Managers.package:has_loaded(package_path) then
+        Managers.package:load(package_path, "danger_zone", function()
+            check_active_decals()
+        end)
+        return
+    else
+        check_active_decals()
+    end
 end
 
 mod.on_disabled = function(_)

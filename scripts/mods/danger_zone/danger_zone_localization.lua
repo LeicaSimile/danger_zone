@@ -198,7 +198,7 @@ local subheaders_loc = {
 		{
 			group_id = "daemonhost_alert3",
 			loc = {
-				["en"] = "Stage: Alert 3",
+				["en"] = "Stage: Alert 3 (about to attack)",
 			},
 		},
 	},
