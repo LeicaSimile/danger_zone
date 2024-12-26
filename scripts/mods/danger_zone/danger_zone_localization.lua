@@ -223,7 +223,7 @@ local subheaders_loc = {
 			loc = {
 				["en"] = "Stage: Sleeping",
 				["zh-cn"] = "阶段：睡眠",
-				["ru"] = "",
+				["ru"] = "Стадия: Спит",
 			},
 		},
 		{
@@ -231,7 +231,7 @@ local subheaders_loc = {
 			loc = {
 				["en"] = "Stage: Alert 1",
 				["zh-cn"] = "阶段：警告 1",
-				["ru"] = "",
+				["ru"] = "Стадия: Встревожен 1",
 			},
 		},
 		{
@@ -239,7 +239,7 @@ local subheaders_loc = {
 			loc = {
 				["en"] = "Stage: Alert 2",
 				["zh-cn"] = "阶段：警告 2",
-				["ru"] = "",
+				["ru"] = "Стадия: Встревожен 2",
 			},
 		},
 		{
@@ -247,7 +247,7 @@ local subheaders_loc = {
 			loc = {
 				["en"] = "Stage: Alert 3 (about to attack)",
 				["zh-cn"] = "阶段：警告 3",
-				["ru"] = "",
+				["ru"] = "Стадия: Встревожен 3 (готов напасть)",
 			},
 		},
 	},
